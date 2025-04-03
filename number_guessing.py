@@ -5,7 +5,7 @@ def check_guess(guess, number):
     if guess < number:
         return "Higher!"
     elif guess > number:
-        return "Lower!"
+        return "Low!"
     else:
         return "Congratulations! You guessed it!"
 
