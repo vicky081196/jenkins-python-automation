@@ -5,7 +5,7 @@ def test_correct_guess():
     assert check_guess(5, 5) == "Congratulations! You guessed it!"
 
 def test_low_guess():
-    assert check_guess(3, 5) == "Higher!"
+    assert check_guess(3, 5) == "Failure Test!"
 
 def test_high_guess():
     assert check_guess(7, 5) == "Lower!"
