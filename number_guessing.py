@@ -3,7 +3,7 @@ import random
 def check_guess(guess, number):
     """Checks if the guessed number is correct, too high, or too low."""
     if guess < number:
-        return "High!"
+        return "Higher!"
     elif guess > number:
         return "Lower!"
     else:
