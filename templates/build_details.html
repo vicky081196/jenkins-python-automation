@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Build #{{ build_details.build_number }} - {{ job_name }} - Jenkins Job Info</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+    <h2>Build #{{ build_details.build_number }} Details</h2>
+
+    <table border="1">
+        <tr>
+            <th>Build Number</th>
+            <td>#{{ build_details.build_number }}</td>
+        </tr>
+        <tr>
+            <th>Status</th>
+            <td>{{ build_details.status }}</td>
+        </tr>
+        <tr>
+            <th>Started</th>
+            <td>{{ build_details.start_time }}</td>
+        </tr>
+        <tr>
+            <th>Duration</th>
+            <td>{{ build_details.duration }}</td>
+        </tr>
+        <tr>
+            <th>Started By</th>
+            <td>{{ build_details.started_by }}</td>
+        </tr>
+        <tr>
+            <th>Revision</th>
+            <td>{{ build_details.revision }}</td>
+        </tr>
+        <tr>
+            <th>Repository</th>
+            <td><a href="{{ build_details.repository }}" target="_blank">{{ build_details.repository }}</a></td>
+        </tr>
+        <tr>
+            <th>Changes</th>
+            <td>{{ build_details.changes }}</td>
+        </tr>        
+    </table>
+
+    <br>
+    <a href="{{ url_for('get_jenkins_job_info', job_name=job_name) }}">Back to Job Info</a>
+
+</body>
+</html>

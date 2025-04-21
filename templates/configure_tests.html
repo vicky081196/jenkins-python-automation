@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Configure Test Execution</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+        }
+        label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        select, input[type="text"], input[type="submit"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 8px;
+            box-sizing: border-box;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        input[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Configure Test Execution</h1>
+    <form method="POST" action="/configure-tests">
+        <label for="job_name">Select Jenkins Job:</label>
+        <select name="job_name" id="job_name" required>
+            <option value="">Loading jobs...</option>
+        </select>
+
+        <label for="test_framework">Select Test Framework:</label>
+        <select name="test_type" id="test_type" required>
+            <option value="pytest">pytest</option>
+        </select>
+
+        <label for="test_location">Enter Test Location:</label>
+        <input type="text" id="test_location" name="test_location" placeholder="Path to your test script" required />
+
+        <input type="submit" value="Configure Test Execution">
+    </form>
+
+    <script>
+        // Fetch the list of Jenkins jobs and populate the dropdown dynamically
+        fetch('/api/jobs')
+            .then(response => response.json())
+            .then(data => {
+                const jobSelect = document.getElementById('job_name');
+                jobSelect.innerHTML = '';  // Clear "Loading" option
+
+                if (data.jobs && data.jobs.length > 0) {
+                    data.jobs.forEach(job => {
+                        const option = document.createElement('option');
+                        option.value = job;
+                        option.textContent = job;
+                        jobSelect.appendChild(option);
+                    });
+                } else {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No jobs found';
+                    jobSelect.appendChild(option);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching jobs:', error);
+                const jobSelect = document.getElementById('job_name');
+                jobSelect.innerHTML = '<option value="">Error loading jobs</option>';
+            });
+    </script>
+</body>
+</html>

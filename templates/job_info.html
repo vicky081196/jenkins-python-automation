@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ job_name }} - Jenkins Job Info</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+    <h2>Job Details: {{ job_name }}</h2>
+
+    <table border="1">
+        <tr>
+            <th>Build Type</th>
+            <th>Build Number</th>
+            <th>Time</th>
+        </tr>
+        {% for key, build in builds.items() %}
+        <tr>
+            <td>
+                <a href="{{ url_for('get_build_details', job_name=job_name, build_type=key) }}">
+                    {{ key.replace("last", "Last ").replace("Build", " Build") }}
+                </a>
+            </td>
+            <td>#{{ build.build_number }}</td>
+            <td>{{ build.timestamp | datetimeformat }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <br>
+    <a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+
+</body>
+</html>
