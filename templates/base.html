@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Jenkins Dashboard{% endblock %}</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+            background: #f4f4f4;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: #f0f4f8;
+            color: #333;
+            padding-top: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        }
+
+        .sidebar h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            letter-spacing: 1px;
+            color: #2c3e50;
+        }
+
+        .sidebar button {
+            background: none;
+            border: none;
+            color: #2c3e50;
+            padding: 15px 20px;
+            text-align: left;
+            width: 100%;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .sidebar button:hover,
+        .sidebar button.active {
+            background-color: #e0e7ef;
+            font-weight: bold;
+        }
+
+        .main {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .breadcrumbs {
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .breadcrumbs a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .breadcrumbs a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 24px;
+        }
+
+        .section {
+            margin-top: 20px;
+        }
+
+        .section p {
+            margin: 8px 0;
+            font-size: 16px;
+        }
+
+        .code-block {
+            background-color: #f9f9f9;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            border-left: 4px solid #ccc;
+            margin-top: 10px;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+    </style>
+    {% block additional_styles %}{% endblock %}
+</head>
+<body>
+    <div class="sidebar">
+        <h3>Dashboard</h3>
+        <button onclick="window.location.href='{{ url_for('dashboard') }}'" class="active">Jenkins Jobs</button>
+        <button onclick="window.location.href='{{ url_for('create_job') }}'">Create Job</button>
+    </div>
+
+    <div class="main">
+        <div class="breadcrumbs">
+            {% block breadcrumbs %}{% endblock %}
+        </div>
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

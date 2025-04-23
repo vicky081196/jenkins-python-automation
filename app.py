@@ -25,7 +25,7 @@ db.init_app(app)
 migrate = Migrate(app, db)
 
 # Jenkins config
-JENKINS_URL = "https://abbc693af914077cd90b8f70f28be556.serveo.net"
+JENKINS_URL = "https://f2db59331ecf85e2b4fa9a417a350e20.serveo.net"
 JENKINS_USER = os.getenv("JENKINS_USERNAME")
 JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
 
@@ -173,31 +173,8 @@ def create_job():
         except Exception as e:
             return f"Failed: {str(e)}"
 
-    return render_template("index.html")
+    return render_template("create_job.html")
 
-
-
-# @app.route('/jenkins/job-info/<job_name>', methods=['GET'])
-# def get_jenkins_job_info(job_name):
-#     url = f"{JENKINS_URL}/job/{job_name}/lastBuild/api/json"
-#     response = requests.get(url, auth=HTTPBasicAuth(JENKINS_USER, JENKINS_TOKEN))
-#     response.raise_for_status()
-
-#     if response.status_code == 200:
-#         data = response.json()
-#         job_info = {
-#             "job_name": job_name,
-#             "build_number": data.get("number"),
-#             "status": data.get("result"),
-#             "building": data.get("building"),
-#             "timestamp": data.get("timestamp"),
-#             "duration": data.get("duration"),
-#             "url": data.get("url"),
-#             "branch": data.get("actions", [{}])[0].get("parameters", [{}])[0].get("value", "N/A")
-#         }
-#         return render_template("job_info.html", job_info=job_info)
-#     else:
-#         return render_template("error.html", error="Failed to fetch job info")
     
 
 @app.template_filter('datetimeformat')
@@ -396,6 +373,67 @@ def configure_tests():
 
     return render_template("configure_tests.html")
 
+
+# To get list of builds with details
+def get_all_builds(job_name):
+    url = f"{JENKINS_URL}/job/{job_name}/api/json"
+    response = requests.get(url, auth=HTTPBasicAuth(JENKINS_USER, JENKINS_TOKEN))
+    if response.status_code == 200:
+        data = response.json()
+        builds = data.get("builds", [])
+        return builds  
+    return None
+
+
+@app.route('/jenkins/all-builds/<job_name>', methods=['GET'])
+def list_jenkins_builds(job_name):
+    builds = get_all_builds(job_name)
+    if builds:
+        build_list = [{"build_number": build["number"], "url": f"{JENKINS_URL}/job/{job_name}/{build['number']}"} for build in builds]
+        return render_template("all_builds.html", job_name=job_name, builds=build_list)
+    else:
+        return f"No builds found for job '{job_name}'"
+    
+
+@app.route('/jenkins/job-info/<job_name>/build/<int:build_number>/console')
+def get_build_console_output(job_name, build_number):
+    console_url = f"{JENKINS_URL}/job/{job_name}/{build_number}/consoleText"
+
+    try:
+        response = requests.get(console_url, auth=(JENKINS_USER, JENKINS_TOKEN))
+        response.raise_for_status()
+        console_output = response.text
+    except requests.RequestException as e:
+        console_output = f"Error fetching console output: {str(e)}"
+
+    return render_template(
+        'console_output.html',
+        job_name=job_name,
+        build_number=build_number,
+        console_output=console_output
+    )
+
+
+@app.route("/delete-job", methods=["POST"])
+def delete_job():
+    job_name = request.form.get("job_name")
+    print(job_name)
+
+    try:
+        # Delete the Jenkins job
+        if server.job_exists(job_name):
+            server.delete_job(job_name)
+            # Also delete the job from the database if it exists
+            job_to_delete = JenkinsJob.query.filter_by(job_name=job_name).first()
+            if job_to_delete:
+                db.session.delete(job_to_delete)
+                db.session.commit()
+
+            return redirect(url_for("dashboard"))
+        else:
+            return f"Job '{job_name}' does not exist on Jenkins.", 404
+    except Exception as e:
+        return f"Failed to delete job: {str(e)}"
 
 
 

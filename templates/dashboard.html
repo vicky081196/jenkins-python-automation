@@ -1,15 +1,80 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Jenkins Job Dashboard</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
+{% extends "base.html" %}
 
+{% block title %}Jenkins Job Dashboard{% endblock %}
+
+{% block additional_styles %}
+<style>
+  .action-btn {
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    font-size: 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .action-btn:hover {
+    background-color: #0056b3;
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .delete-btn {
+    background-color: #e74c3c;
+  }
+
+  .delete-btn:hover {
+    background-color: #c0392b;
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background: rgba(0,0,0,0.4);
+  }
+
+  .modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    width: 30%;
+    border-radius: 8px;
+  }
+
+  .modal-header h3 {
+    margin: 0 0 10px;
+    text-align: center;
+  }
+
+  .modal-body {
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .modal-footer {
+    text-align: center;
+  }
+
+</style>
+{% endblock %}
+
+{% block content %}
   <h2>Jenkins Job Dashboard</h2>
 
-  <table border="1">
+  <table border="1" cellspacing="0" cellpadding="8">
     <thead>
       <tr>
         <th>Job Name</th>
@@ -17,7 +82,7 @@
         <th>Branch</th>
         <th>Email</th>
         <th>Created At</th>
-        <th>Execute Job</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -28,15 +93,62 @@
           <td>{{ job.branch }}</td>
           <td>{{ job.email }}</td>
           <td>{{ job.created_at }}</td>
-          <td>
-            <form action="{{ url_for('run_job', job_name=job.job_name) }}" method="post">
-              <button type="submit" style="padding: 4px 8px;">Run</button>
+          <td class="btn-group">
+            <form action="{{ url_for('run_job', job_name=job.job_name) }}" method="post" style="margin: 0;">
+              <button type="submit" class="action-btn">Run</button>
             </form>
+          
+            <form action="{{ url_for('list_jenkins_builds', job_name=job.job_name) }}" method="get" style="margin: 0;">
+              <button type="submit" class="action-btn">Build History</button>
+            </form>
+
+            <button type="button" class="delete-btn" onclick="confirmDelete('{{ job.job_name }}')">Delete</button>
+        
           </td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
 
-</body>
-</html>
+  <!-- Modal HTML -->
+  <div id="deleteModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Confirm Deletion</h3>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete the job <strong id="jobToDelete"></strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <form id="deleteForm" action="{{ url_for('delete_job') }}" method="post">
+          <input type="hidden" name="job_name" id="jobNameInput">
+          <button type="submit" class="action-btn delete-btn">Yes, Delete</button>
+          <button type="button" class="action-btn" onclick="closeModal()">Cancel</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function confirmDelete(jobName) {
+    document.getElementById('jobToDelete').textContent = jobName;
+    document.getElementById('jobNameInput').value = jobName;
+    document.getElementById('deleteModal').style.display = 'block';
+  }
+
+  function closeModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+  }
+
+  window.onclick = function(event) {
+    const modal = document.getElementById('deleteModal');
+    if (event.target === modal) {
+      modal.style.display = 'none';
+    }
+  }
+</script>
+{% endblock %}
+

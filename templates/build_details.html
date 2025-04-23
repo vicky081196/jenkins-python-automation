@@ -1,51 +1,80 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Build #{{ build_details.build_number }} - {{ job_name }} - Jenkins Job Info</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Build #{{ build_details.build_number }} Details{% endblock %}
 
-    <h2>Build #{{ build_details.build_number }} Details</h2>
+{% block breadcrumbs %}
+    <a href="{{ url_for('dashboard') }}">Dashboard</a> &gt; 
+    <a href="{{ url_for('get_jenkins_job_info', job_name=job_name) }}">{{ job_name }}</a> &gt; 
+    Build #{{ build_details.build_number }}
+{% endblock %}
 
-    <table border="1">
-        <tr>
-            <th>Build Number</th>
-            <td>#{{ build_details.build_number }}</td>
-        </tr>
-        <tr>
-            <th>Status</th>
-            <td>{{ build_details.status }}</td>
-        </tr>
-        <tr>
-            <th>Started</th>
-            <td>{{ build_details.start_time }}</td>
-        </tr>
-        <tr>
-            <th>Duration</th>
-            <td>{{ build_details.duration }}</td>
-        </tr>
-        <tr>
-            <th>Started By</th>
-            <td>{{ build_details.started_by }}</td>
-        </tr>
-        <tr>
-            <th>Revision</th>
-            <td>{{ build_details.revision }}</td>
-        </tr>
-        <tr>
-            <th>Repository</th>
-            <td><a href="{{ build_details.repository }}" target="_blank">{{ build_details.repository }}</a></td>
-        </tr>
-        <tr>
-            <th>Changes</th>
-            <td>{{ build_details.changes }}</td>
-        </tr>        
-    </table>
+{% block additional_styles %}
+    <style>
+        h1 {
+            font-size: 28px;
+            color: #2c3e50;
+        }
 
-    <br>
-    <a href="{{ url_for('get_jenkins_job_info', job_name=job_name) }}">Back to Job Info</a>
+        .section {
+            margin-top: 25px;
+        }
 
-</body>
-</html>
+        .section p {
+            font-size: 18px;
+        }
+
+        .code-block {
+            background-color: #f9f9f9;
+            padding: 12px;
+            font-family: monospace;
+            border-left: 5px solid #ccc;
+            margin-top: 12px;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>#{{ build_details.build_number }} 
+            <span style="font-size: 16px; color: gray;">
+                ({{ build_details.timestamp | datetimeformat }})
+            </span>
+        </h1>
+
+        <div class="section">
+            <p>{{ build_details.start_time }}</p>
+            <p>Took {{ build_details.duration }}</p>
+            <p><span class="bold">Started by:</span> {{ build_details.started_by }}</p>
+        </div>
+
+        <div class="section">
+            <p class="bold">&#x23F1; This run spent:</p>
+            <ul style="padding-left: 20px; margin-top: 10px;">
+                <li>{{ build_details.duration }} build duration;</li>
+                <li>{{ build_details.start_time }} ago;</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <p class="bold">Revision:</p>
+            <div>{{ build_details.revision }}</div>
+
+            <p class="bold">Repository:</p>
+            <div>
+                <a href="{{ build_details.repository }}" target="_blank">{{ build_details.repository }}</a>
+            </div>
+        </div>
+
+        <div class="section">
+            <p>
+                <svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 0 512 512" fill="currentColor" style="vertical-align: middle; margin-right: 6px;">
+                    <path d="M160 368L32 256l128-112M352 368l128-112-128-112M304 96l-96 320" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="32"></path>
+                </svg>
+                {{ build_details.changes }}
+            </p>
+        </div>
+    </div>
+{% endblock %}
