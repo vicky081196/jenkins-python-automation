@@ -107,12 +107,7 @@
     {% block additional_styles %}{% endblock %}
 </head>
 <body>
-    <div class="sidebar">
-        <h3>Dashboard</h3>
-        <button onclick="window.location.href='{{ url_for('dashboard') }}'" class="active">Jenkins Jobs</button>
-        <button onclick="window.location.href='{{ url_for('create_job') }}'">Create Job</button>
-    </div>
-
+    {% include "sidebar.html" %}
     <div class="main">
         <div class="breadcrumbs">
             {% block breadcrumbs %}{% endblock %}

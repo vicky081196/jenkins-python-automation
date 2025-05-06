@@ -34,6 +34,14 @@
     background-color: #c0392b;
   }
 
+  .edit-btn {
+    background-color: #f39c12;
+  }
+
+  .edit-btn:hover {
+    background-color: #e67e22;
+  }
+
   .modal {
     display: none;
     position: fixed;
@@ -72,7 +80,7 @@
 {% endblock %}
 
 {% block content %}
-  <h2>Jenkins Job Dashboard</h2>
+  <h2>Job Dashboard</h2>
 
   <table border="1" cellspacing="0" cellpadding="8">
     <thead>
@@ -101,6 +109,8 @@
             <form action="{{ url_for('list_jenkins_builds', job_name=job.job_name) }}" method="get" style="margin: 0;">
               <button type="submit" class="action-btn">Build History</button>
             </form>
+
+            <a href="{{ url_for('edit_job_configure', job_name=job.job_name) }}" class="action-btn edit-btn">Edit</a>
 
             <button type="button" class="delete-btn" onclick="confirmDelete('{{ job.job_name }}')">Delete</button>
         

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Maven Goals{% endblock %}
+
+{% block additional_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+<style>
+  form {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+
+  form h2 {
+    font-size: 24px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  form label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+
+  form select, form input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+  }
+
+  form button {
+    width: 100%;
+    padding: 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  form button:hover {
+    background-color: #218838;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>Edit Maven Goals</h2>
+
+<!-- Loading Spinner -->
+<div id="loading-spinner" class="text-center" style="display: none;">
+    <div class="spinner-img">
+        <img src="{{ url_for('static', filename='img/loader_image.gif') }}" alt="Loading..." />
+    </div>
+    <div class="spinner-text">Loading...</div>
+</div>
+
+<!-- Form for editing Maven Goals -->
+<form id="maven-goal-form">
+  <label for="job-select">Select Maven Job:</label>
+  <select id="job-select" required>
+    <option value="" disabled selected>Loading jobs...</option>
+  </select>
+
+  <label for="goal-input">Maven Goal:</label>
+  <input type="text" id="goal-input" placeholder="e.g. clean test" required />
+
+  <button type="submit">Update Goal</button>
+</form>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+  let jobData = [];
+
+  window.onload = async function () {
+    try {
+      // Show the loading spinner
+      document.getElementById('loading-spinner').style.display = 'block';
+
+      const res = await fetch('/api/get_maven_jobs');
+      const data = await res.json();
+      jobData = data.maven_jobs;
+
+      // Hide the loading spinner once the jobs are loaded
+      document.getElementById('loading-spinner').style.display = 'none';
+
+      const dropdown = document.getElementById('job-select');
+      dropdown.innerHTML = '<option disabled selected>Select a job</option>';
+
+      jobData.forEach(job => {
+        const option = document.createElement('option');
+        option.value = job.job_name;
+        option.textContent = job.job_name;
+        dropdown.appendChild(option);
+      });
+
+      dropdown.onchange = function () {
+        const selectedJob = jobData.find(j => j.job_name === dropdown.value);
+        document.getElementById('goal-input').value = selectedJob?.goal || '';
+      };
+    } catch (error) {
+      // Hide the spinner in case of an error
+      document.getElementById('loading-spinner').style.display = 'none';
+      alert("Failed to load Maven jobs.");
+    }
+  };
+
+  document.getElementById('maven-goal-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const jobName = document.getElementById('job-select').value;
+    const newGoal = document.getElementById('goal-input').value;
+
+    if (!jobName || !newGoal) {
+        alert("Please select a job and enter a Maven goal.");
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/update_maven_goal', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            job_name: jobName,
+            new_goal: newGoal
+        })
+        });
+
+        if (res.ok) {
+            const successBox = document.createElement('div');
+            successBox.textContent = `Maven goal for job "${jobName}" updated to "${newGoal}"`;
+            successBox.style.backgroundColor = '#d4edda';
+            successBox.style.color = '#155724';
+            successBox.style.padding = '10px';
+            successBox.style.marginTop = '10px';
+            successBox.style.borderRadius = '5px';
+            successBox.style.textAlign = 'center';
+            document.getElementById('maven-goal-form').appendChild(successBox);
+
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            alert('Failed to update Maven goal.');
+        }
+    } catch (error) {
+        alert('Error updating Maven goal.');
+        console.error(error);
+    }
+
+  });
+    
+
+
+</script>
+{% endblock %}

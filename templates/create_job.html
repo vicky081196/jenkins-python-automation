@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Create Jenkins Job{% endblock %}
+{% block title %}Set Up a New Deployment{% endblock %}
 
 {% block additional_styles %}
 <style>
@@ -21,16 +21,37 @@
 
   form label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     font-size: 14px;
   }
 
-  form input {
+  form input, form select {
     width: 100%;
     padding: 10px;
-    margin-bottom: 15px;
+    margin-bottom: 5px;
     border-radius: 4px;
     border: 1px solid #ccc;
+    font-size: 14px;
+  }
+
+  form input.valid, form select.valid {
+    border-color: #28a745;
+  }
+
+  .error-text {
+    color: red;
+    font-size: 13px;
+    margin-bottom: 10px;
+    display: none;
+  }
+
+  form select {
+    appearance: none;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px 16px;
   }
 
   form button {
@@ -40,8 +61,8 @@
     color: white;
     border: none;
     border-radius: 4px;
-    cursor: pointer;
     font-size: 16px;
+    cursor: pointer;
   }
 
   form button:hover {
@@ -51,23 +72,97 @@
 {% endblock %}
 
 {% block content %}
-  <h2>Create a Jenkins Job</h2>
-  <form action="{{ url_for('create_job') }}" method="POST">
-    <label for="git_repo">Git Repository URL:</label>
-    <input type="url" id="git_repo" name="git_repo" required>
+<h2>Create a New Project Pipeline</h2>
+<form id="pipeline-form" action="{{ url_for('create_job') }}" method="POST">
+  <label for="git_repo">Repository URL:</label>
+  <input type="url" id="git_repo" name="git_repo">
+  <div class="error-text" id="error-git_repo"></div>
 
-    <label for="git_user">Git Username:</label>
-    <input type="text" id="git_user" name="git_user" required>
+  <label for="git_user">GitHub Username:</label>
+  <input type="text" id="git_user" name="git_user">
+  <div class="error-text" id="error-git_user"></div>
 
-    <label for="git_token">Git Token / Password:</label>
-    <input type="password" id="git_token" name="git_token" required>
+  <label for="git_token">Access Token / Password:</label>
+  <input type="password" id="git_token" name="git_token">
+  <div class="error-text" id="error-git_token"></div>
 
-    <label for="branch">Branch Name:</label>
-    <input type="text" id="branch" name="branch" required>
+  <label for="branch">Branch:</label>
+  <input type="text" id="branch" name="branch">
+  <div class="error-text" id="error-branch"></div>
 
-    <label for="email">Email ID:</label>
-    <input type="email" id="email" name="email" required>
+  <label for="email">Notify Email:</label>
+  <input type="email" id="email" name="email">
+  <div class="error-text" id="error-email"></div>
 
-    <button type="submit">Create Job and Trigger Build</button>
-  </form>
+  <label for="repo_type">Project Type:</label>
+  <select id="repo_type" name="repo_type">
+    <option value="">Select Type</option>
+    <option value="python">Python</option>
+    <option value="node">Node.js</option>
+    <option value="java">Java</option>
+  </select>
+  <div class="error-text" id="error-repo_type"></div>
+
+  <button type="submit">Start Deployment</button>
+</form>
 {% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('pipeline-form');
+    const fields = ['git_repo', 'git_user', 'git_token', 'branch', 'email', 'repo_type'];
+
+    const validators = {
+      git_repo: val => {
+        if (val === '') return 'Repository URL is required.';
+        if (!val.startsWith('http')) return 'Repository URL must start with http or https.';
+        return '';
+      },
+      git_user: val => val === '' ? 'GitHub Username is required.' : '',
+      git_token: val => val === '' ? 'Access Token is required.' : '',
+      branch: val => val === '' ? 'Branch name is required.' : '',
+      email: val => {
+        if (val === '') return 'Email is required.';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) return 'Please enter a valid email address.';
+        return '';
+      },
+      repo_type: val => val === '' ? 'Please select a project type.' : ''
+    };
+
+    function validateField(id) {
+      const el = document.getElementById(id);
+      const errorEl = document.getElementById(`error-${id}`);
+      const value = el.value.trim();
+      const error = validators[id](value);
+
+      if (error) {
+        errorEl.textContent = error;
+        errorEl.style.display = 'block';
+        el.classList.remove('valid');
+        return false;
+      } else {
+        errorEl.style.display = 'none';
+        el.classList.add('valid');
+        return true;
+      }
+    }
+
+    // Real-time validation
+    fields.forEach(id => {
+      const el = document.getElementById(id);
+      el.addEventListener('blur', () => validateField(id));
+      el.addEventListener('input', () => validateField(id));
+    });
+
+    form.addEventListener('submit', function (e) {
+      let valid = true;
+      fields.forEach(id => {
+        if (!validateField(id)) valid = false;
+      });
+      if (!valid) e.preventDefault();
+    });
+  });
+</script>
+{% endblock %}
+

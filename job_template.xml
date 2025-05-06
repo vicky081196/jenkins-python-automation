@@ -49,6 +49,7 @@
     <hudson.tasks.Shell>
       <command>echo "Build triggered!"</command>
     </hudson.tasks.Shell>
+    __MAVEN_BUILD_STEP__
   </builders>
   <!-- Email Notification Section -->
   <publishers>

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Jenkins Job Configuration{% endblock %}
+
+{% block additional_styles %}
+<style>
+  form {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+
+  form h2 {
+    font-size: 24px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  form label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+
+  form input, form select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+  }
+
+  form input[readonly], form select[readonly] {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+  }
+
+  form button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  form button:hover {
+    background-color: #0056b3;
+  }
+
+  .section {
+    margin-top: 20px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+  <h2>Edit Jenkins Job Configuration</h2>
+  <form action="{{ url_for('edit_job_configure', job_name=job_name) }}" method="POST">
+    <!-- Git Configuration -->
+    <div class="section">
+      <h3>Git Configuration</h3>
+      <label for="git_repo">Git Repository URL:</label>
+      <input type="url" id="git_repo" name="git_repo" value="{{ job_config.git_repo }}" readonly>
+
+      <label for="git_user">Git Username:</label>
+      <input type="text" id="git_user" name="git_user" value="{{ job_config.git_user }}" readonly>
+
+      <label for="branch">Branch Name:</label>
+      <input type="text" id="branch" name="branch" value="{{ job_config.branch }}" readonly>
+    </div>
+
+    <!-- Email Configuration -->
+    <div class="section">
+      <h3>Email Notification</h3>
+      <label for="email">Email ID:</label>
+      <input type="email" id="email" name="email" value="{{ job_config.email }}">
+    </div>
+
+    <button type="submit">Save Changes</button>
+  </form>
+{% endblock %}

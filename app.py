@@ -12,6 +12,10 @@ import json
 import humanize
 from datetime import datetime, timedelta
 from models import db, JenkinsJob 
+import tempfile
+import subprocess
+from xml.etree import ElementTree
+
 
 load_dotenv()
 
@@ -25,7 +29,7 @@ db.init_app(app)
 migrate = Migrate(app, db)
 
 # Jenkins config
-JENKINS_URL = "https://f2db59331ecf85e2b4fa9a417a350e20.serveo.net"
+JENKINS_URL = "https://element-phentermine-eternal-disclosure.trycloudflare.com"
 JENKINS_USER = os.getenv("JENKINS_USERNAME")
 JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
 
@@ -37,7 +41,7 @@ def dashboard():
     # Fetch all Jenkins jobs from the database
     jobs = JenkinsJob.query.all()
 
-    return render_template("dashboard.html", jobs=jobs)
+    return render_template("dashboard.html", jobs=jobs, page="dashboard")
 
 
 # Helper to create Git credentials
@@ -88,6 +92,24 @@ def create_git_credentials(git_user, git_token, cred_id):
     return response.status_code in [200, 201, 204]
 
 
+def extract_repo_name(git_repo):
+    return git_repo.rstrip("/").split("/")[-1].replace(".git", "")
+
+
+def is_maven_project(repo_url, branch='main'):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        try:
+            subprocess.run(
+                ["git", "clone", "--depth", "1", "--branch", branch, repo_url, tmpdir],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            return os.path.exists(os.path.join(tmpdir, "pom.xml"))
+        except Exception:
+            return False
+            
+
 @app.route("/create_job", methods=["GET", "POST"])
 def create_job():
     if request.method == "POST":
@@ -96,6 +118,10 @@ def create_job():
         git_token = request.form["git_token"]
         branch = request.form["branch"]
         email = request.form["email"]
+        repo_type = request.form.get("repo_type")
+        
+        # Extract repo name
+        repo_name = extract_repo_name(git_repo)
 
         # Validate GitHub username
         github_user_check = requests.get(f"https://api.github.com/users/{git_user}")
@@ -110,13 +136,16 @@ def create_job():
         # Create credentials dynamically
         if not create_git_credentials(git_user, git_token, cred_id):
             return "Failed to create Jenkins Git credentials."
+        
+        is_maven = False
+        if repo_type == "java":
+            is_maven = is_maven_project(git_repo, branch)
 
         # Prepare Jenkins job config
         with open("job_template.xml", "r") as file:
             config_xml = file.read()
 
             # Replace repo-related values
-            repo_name = git_repo.rstrip("/").split("/")[-1].replace(".git", "")
             config_xml = config_xml.replace("__GIT_URL__", git_repo)
             config_xml = config_xml.replace("__GIT_USER__", git_user)
             config_xml = config_xml.replace("__REPO_NAME__", repo_name)
@@ -125,6 +154,20 @@ def create_job():
             config_xml = config_xml.replace("__BRANCH_NAME__", branch)
             config_xml = config_xml.replace("__GIT_CRED_ID__", cred_id)
             config_xml = config_xml.replace("__EMAIL_RECIPIENTS__", email)
+
+            # Inject Maven build step only if repo_type == "maven"
+            if is_maven:
+                maven_block = """<hudson.tasks.Maven>
+                                <targets>clean test</targets>
+                                <mavenName>Default</mavenName>
+                                <usePrivateRepository>false</usePrivateRepository>
+                                <settings class="jenkins.mvn.DefaultSettingsProvider"/>
+                                <globalSettings class="jenkins.mvn.DefaultGlobalSettingsProvider"/>
+                                </hudson.tasks.Maven>"""
+            else:
+                maven_block = ""
+
+            config_xml = config_xml.replace("__MAVEN_BUILD_STEP__", maven_block)
 
             # Ensure GitHub hook trigger is included
             if "<triggers/>" in config_xml:
@@ -137,8 +180,8 @@ def create_job():
                     </triggers>'''
                 )
 
-
-        job_name = f"job-{git_user}-{branch}".replace("/", "-")
+        
+        job_name = f"job-{git_user}-{repo_name}-{branch}".replace("/", "-")
 
         try:
             # Create or reconfigure job with final XML
@@ -173,13 +216,13 @@ def create_job():
         except Exception as e:
             return f"Failed: {str(e)}"
 
-    return render_template("create_job.html")
+    return render_template("create_job.html", page="create_job")
 
     
 
 @app.template_filter('datetimeformat')
 def datetimeformat(value):
-    dt = datetime.fromtimestamp(value / 1000)  # divide by 1000 if value is in ms
+    dt = datetime.fromtimestamp(value / 1000)
     return humanize.naturaltime(datetime.now() - dt)
     
 def get_build_summary(job_name, build_type):
@@ -193,7 +236,7 @@ def get_build_summary(job_name, build_type):
         }
     return None
 
-@app.route('/jenkins/job-info/<job_name>', methods=['GET'])
+@app.route('/a9t9/job-info/<job_name>', methods=['GET'])
 def get_jenkins_job_info(job_name):
     build_types = [
         "lastBuild",
@@ -229,7 +272,7 @@ def format_duration(ms):
         return f"{sec} sec"
 
 
-@app.route('/jenkins/job-info/<job_name>/build/<build_type>', methods=['GET'])
+@app.route('/a9t9/job-info/<job_name>/build/<build_type>', methods=['GET'])
 def get_build_details(job_name, build_type):
     url = f"{JENKINS_URL}/job/{job_name}/{build_type}/api/json"
     response = requests.get(url, auth=HTTPBasicAuth(JENKINS_USER, JENKINS_TOKEN))
@@ -280,7 +323,6 @@ def run_job(job_name):
         # Trigger the Jenkins build for the given job name
         server.build_job(job_name)
 
-        # Redirect back to the dashboard after triggering the build
         return redirect(url_for("dashboard"))
     except Exception as e:
         return f"Failed to run job: {str(e)}"
@@ -385,7 +427,7 @@ def get_all_builds(job_name):
     return None
 
 
-@app.route('/jenkins/all-builds/<job_name>', methods=['GET'])
+@app.route('/a9t9/all-builds/<job_name>', methods=['GET'])
 def list_jenkins_builds(job_name):
     builds = get_all_builds(job_name)
     if builds:
@@ -395,7 +437,7 @@ def list_jenkins_builds(job_name):
         return f"No builds found for job '{job_name}'"
     
 
-@app.route('/jenkins/job-info/<job_name>/build/<int:build_number>/console')
+@app.route('/a9t9/job-info/<job_name>/build/<int:build_number>/console')
 def get_build_console_output(job_name, build_number):
     console_url = f"{JENKINS_URL}/job/{job_name}/{build_number}/consoleText"
 
@@ -414,6 +456,82 @@ def get_build_console_output(job_name, build_number):
     )
 
 
+def update_email_config(root, new_email):
+    # Standard Email Notification
+    for mailer in root.findall(".//hudson.tasks.Mailer/recipients"):
+        mailer.text = new_email
+
+    # Extended Email Notification - main recipientList
+    for emailext in root.findall(".//hudson.plugins.emailext.ExtendedEmailPublisher/recipientList"):
+        emailext.text = new_email
+
+    # Extended Email Notification - triggers -> email -> recipientList
+    for trigger in root.findall(".//hudson.plugins.emailext.ExtendedEmailPublisher/configuredTriggers/*/email/recipientList"):
+        trigger.text = new_email
+
+
+
+@app.route('/edit_job_configure/<job_name>', methods=['GET', 'POST'])
+def edit_job_configure(job_name):
+    job = JenkinsJob.query.filter_by(job_name=job_name).first()
+
+    if not job:
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        new_email = request.form['email']
+        job.email = new_email
+        db.session.commit()
+
+        jenkins_job_url = f"{JENKINS_URL}/job/{job_name}/config.xml"
+        try:
+            response = requests.get(jenkins_job_url, auth=(JENKINS_USER, JENKINS_TOKEN))
+            response.raise_for_status()
+
+            job_config_xml = response.text
+            tree = ElementTree.ElementTree(ElementTree.fromstring(job_config_xml))
+            root = tree.getroot()
+
+            # Use helper to update email in XML
+            update_email_config(root, new_email)
+
+            updated_config_xml = ElementTree.tostring(root, encoding='unicode')
+            server.reconfig_job(job_name, updated_config_xml)
+
+            print(f"Reconfigured job {job_name} with updated email.")
+            return redirect(url_for('dashboard', job_name=job_name))
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching Jenkins job configuration: {e}")
+            return redirect(url_for('dashboard'))
+
+    else:
+        jenkins_job_url = f"{JENKINS_URL}/job/{job_name}/config.xml"
+        try:
+            response = requests.get(jenkins_job_url, auth=(JENKINS_USER, JENKINS_TOKEN))
+            response.raise_for_status()
+            job_config_xml = response.text
+
+            tree = ElementTree.ElementTree(ElementTree.fromstring(job_config_xml))
+            root = tree.getroot()
+
+            build_steps = []
+            for step in root.iter('builders'):
+                for builder in step:
+                    if builder.tag == 'hudson.tasks.Shell':
+                        build_steps.append(builder.find('command').text)
+
+            build_steps_str = "\n".join(build_steps)
+
+            return render_template('edit_job_configure.html', job_name=job_name, job_config=job, build_steps=build_steps_str)
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching Jenkins job configuration: {e}")
+            return redirect(url_for('dashboard'))
+
+
+
+
 @app.route("/delete-job", methods=["POST"])
 def delete_job():
     job_name = request.form.get("job_name")
@@ -423,7 +541,7 @@ def delete_job():
         # Delete the Jenkins job
         if server.job_exists(job_name):
             server.delete_job(job_name)
-            # Also delete the job from the database if it exists
+            # Delete the job from the database if it exists
             job_to_delete = JenkinsJob.query.filter_by(job_name=job_name).first()
             if job_to_delete:
                 db.session.delete(job_to_delete)
@@ -435,6 +553,99 @@ def delete_job():
     except Exception as e:
         return f"Failed to delete job: {str(e)}"
 
+
+@app.route("/maven-jobs")
+def maven_jobs():
+    return render_template("maven_jobs.html", page='edit_maven_goals')
+
+
+@app.route("/api/get_maven_jobs")
+def get_maven_jobs():
+    jenkins_url = f"{JENKINS_URL}/api/json"
+    auth = (JENKINS_USER, JENKINS_TOKEN)
+    maven_jobs = []
+
+    try:
+        response = requests.get(jenkins_url, auth=auth)
+        response.raise_for_status()
+        jobs_data = response.json()
+
+        for job in jobs_data.get("jobs", []):
+            job_name = job["name"]
+            config_url = f"{JENKINS_URL}/job/{job_name}/config.xml"
+            config_response = requests.get(config_url, auth=auth)
+
+            if config_response.status_code == 200:
+                root = ET.fromstring(config_response.text)
+                maven_step = root.find(".//hudson.tasks.Maven")
+                if maven_step is not None:
+                    goal = maven_step.find("targets")
+                    maven_jobs.append({
+                        "job_name": job_name,
+                        "goal": goal.text if goal is not None else ""
+                    })
+
+        return jsonify({"maven_jobs": maven_jobs})
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+@app.route('/api/update_maven_goal', methods=['POST'])
+def update_maven_goal():
+    data = request.get_json()
+
+    job_name = data.get('job_name')
+    new_goal = data.get('new_goal')
+
+    if not job_name or not new_goal:
+        return jsonify({"error": "Job name and new goal are required"}), 400
+
+    jenkins_url = f"{JENKINS_URL}/job/{job_name}/config.xml"
+    auth = (JENKINS_USER, JENKINS_TOKEN)
+
+    try:
+        # Fetch the job's XML configuration from Jenkins
+        config_response = requests.get(jenkins_url, auth=auth)
+
+        if config_response.status_code != 200:
+            return jsonify({"error": f"Failed to fetch job configuration for '{job_name}'"}), 500
+
+        # Parse the job's XML configuration
+        root = ET.fromstring(config_response.text)
+
+        print("XML Structure:")
+        print(ET.tostring(root, encoding='unicode'))
+
+        # Find the Maven build step and update the goal
+        maven_step = root.find(".//hudson.tasks.Maven")
+        if maven_step is not None:
+            # Find the targets element and update the goal
+            targets_element = maven_step.find('targets')
+            if targets_element is not None:
+                targets_element.text = new_goal  # Update the goal (targets element)
+            else:
+                return jsonify({"error": "Maven targets element not found in the Maven step."}), 500
+        else:
+            return jsonify({"error": "Maven build step not found in the configuration"}), 500
+
+        # Debug: Print updated XML structure for inspection
+        print("Updated XML:")
+        print(ET.tostring(root, encoding='unicode'))
+
+        # Save the updated XML configuration back to Jenkins
+        headers = {'Content-Type': 'application/xml'}
+
+        # Sending the updated XML configuration to Jenkins
+        update_response = requests.post(jenkins_url, data=ET.tostring(root), headers=headers, auth=auth)
+
+        if update_response.status_code == 200:
+            return jsonify({"message": f"Maven goal for job '{job_name}' updated to '{new_goal}'"}), 200
+        else:
+            return jsonify({"error": f"Failed to update job configuration, Jenkins responded with {update_response.status_code}"}), 500
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
 
 
 

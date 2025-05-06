@@ -1,0 +1,18 @@
+<div class="sidebar">
+    <h3>Dashboard</h3>
+    <button 
+        onclick="window.location.href='{{ url_for('dashboard') }}'"
+        class="{% if page == 'dashboard' %}active{% endif %}">
+        Jobs
+    </button>
+    <button 
+        onclick="window.location.href='{{ url_for('create_job') }}'"
+        class="{% if page == 'create_job' %}active{% endif %}">
+        Create Job
+    </button>
+    <button 
+        onclick="window.location.href='{{ url_for('maven_jobs') }}'"
+        class="{% if page == 'edit_maven_goals' %}active{% endif %}">
+        Edit Maven Goals
+    </button>
+</div>
